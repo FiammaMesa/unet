@@ -7,11 +7,11 @@ from tensorflow import keras
 from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping
 from keras import backend as keras_backend
 
 
-def unet(pretrained_weights = None,input_size = (256,256,1)):
+def unet(pretrained_weights = None,input_size = (256,256,3)):
     inputs = Input(input_size)
     conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
     conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
