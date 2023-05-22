@@ -5,6 +5,12 @@ import os
 import glob
 import skimage.io as io
 import skimage.transform as trans
+from PIL import Image
+
+from skimage.metrics import structural_similarity as ssim
+import matplotlib.pyplot as plt
+import math
+import cv2
 
 Sky = [128,128,128]
 Building = [128,0,0]
@@ -56,6 +62,7 @@ def trainGenerator(batch_size,image_folder,mask_folder,aug_dict,image_color_mode
     '''
     image_datagen = ImageDataGenerator(**aug_dict)
     mask_datagen = ImageDataGenerator(**aug_dict)
+    print(save_to_dir)
     image_generator = image_datagen.flow_from_directory(
         image_folder,
         class_mode = None,
@@ -123,3 +130,51 @@ def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
     for i,item in enumerate(npyfile):
         img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]
         io.imsave(os.path.join(save_path,"%d_predict.png"%i),img)
+
+
+def mse(imageA, imageB):
+  # the 'Mean Squared Error' between the two images is the
+  # sum of the squared difference between the two images;
+  # NOTE: the two images must have the same dimension
+  err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+  err /= float(imageA.shape[0] * imageA.shape[1])
+
+  # return the MSE, the lower the error, the more "similar"
+  # the two images are
+  return err
+     
+def compare_images(imageA, imageB, title):
+  # compute the mean squared error and structural similarity
+  # index for the images
+  m = math.sqrt(mse(imageA, imageB))
+  s = ssim(imageA, imageB, channel_axis=2)
+  # setup the figure
+  fig = plt.figure(title)
+  plt.suptitle("MSE: %.2f, SSIM: %.2f" % (m, s))
+  # show first image
+  ax = fig.add_subplot(1, 2, 1)
+  plt.imshow(imageA, cmap = plt.cm.gray)
+  plt.axis("off")
+  # show the second image
+  ax = fig.add_subplot(1, 2, 2)
+  plt.imshow(imageB, cmap = plt.cm.gray)
+  plt.axis("off")
+  # show the images
+  plt.show()
+        
+def calculatePixelsError(folderA, folderB):
+  image_name = 0
+  for file in range(int(len(os.listdir(folderA))/2)):
+    img = cv2.imread(folderA + str(image_name) + '_predict.png')
+    img = cv2.resize(img, (256, 256), interpolation=cv2.INTER_AREA)
+    ret, img = cv2.threshold(img, 25, 255, cv2.THRESH_BINARY)
+    
+
+    lbl = cv2.imread(folderB + str(image_name) + '.png')
+    lbl = cv2.resize(lbl, (256, 256), interpolation=cv2.INTER_AREA)
+
+    
+    print("-----------------")
+    print(f"Image {file}")
+    compare_images(img, lbl, "Pixel error btw images " + str(image_name))
+    image_name +=1
